@@ -31,105 +31,31 @@ class FreshMailTest extends TestCase
         return new FreshMail(WIZJO_FM_API_KEY, WIZJO_FM_API_SECRET, $guzzle);
     }
 
-    public function testDefaultGuzzleInit()
+    public function testCreateClass()
     {
         new FreshMail(WIZJO_FM_API_KEY, WIZJO_FM_API_SECRET);
     }
 
+    public function testCreateClassWithCustomGuzzle()
+    {
+        $guzzle = new Client();
+        new FreshMail(WIZJO_FM_API_KEY, WIZJO_FM_API_SECRET, $guzzle);
+    }
+
     public function testRequest()
     {
-        $responses = [
-            new Response(
-                200,
-                [],
-                json_encode([
-                    'status' => 'OK',
-                    'data' => 'pong'
-                ])
-            )
-        ];
-        $fm = $this->getFreshMail($responses);
-
+        $fm = $this->getFreshMail([new Response()]);
         $action = $fm->request('/ping');
 
-        $response = $action->getResponse();
-        $request = $action->getRequest();
-        $data = $action->getData();
-
-        static::assertEquals('GET', $request->getMethod());
-
-        static::assertFalse($action->hasErrors());
-        static::assertEquals(200, $response->getStatusCode());
-
-        static::assertArrayHasKey('status', $data);
-        static::assertArrayHasKey('data', $data);
-
-        static::assertEquals('OK', $data['status']);
-        static::assertEquals('pong', $data['data']);
+        static::assertInstanceOf(Action::class, $action);
     }
 
-    public function testPostRequest()
+    public function testRequestWithAttributes()
     {
-        $testData = ['test' => 'data'];
-        $responses = [
-            new Response(
-                200,
-                [],
-                json_encode([
-                    'status' => 'OK',
-                    'data' => $testData
-                ])
-            )
-        ];
-        $fm = $this->getFreshMail($responses);
+        $fm = $this->getFreshMail([new Response()]);
+        $action = $fm->request('/ping', ['test' => 'data']);
 
-        $action = $fm->request('/ping', $testData);
-
-        $response = $action->getResponse();
-        $request = $action->getRequest();
-        $data = $action->getData();
-
-        static::assertEquals('POST', $request->getMethod());
-
-        static::assertFalse($action->hasErrors());
-        static::assertEquals(200, $response->getStatusCode());
-
-        static::assertArrayHasKey('status', $data);
-        static::assertArrayHasKey('data', $data);
-
-        static::assertEquals('OK', $data['status']);
-        static::assertEquals($testData, $data['data']);
-    }
-
-    public function testInvalidRequest()
-    {
-        $responses = [
-            new Response(
-                200,
-                [],
-                json_encode([
-                    'status' => 'ERROR',
-                    'errors' => [
-                        [
-                            'id' => 1000,
-                            'message' => 'Error'
-                        ]
-                    ]
-                ])
-            )
-        ];
-        $fm = $this->getFreshMail($responses);
-
-        $action = $fm->request('/invalid');
-
-        $data = $action->getData();
-
-        static::assertTrue($action->hasErrors());
-
-        static::assertArrayHasKey('status', $data);
-        static::assertEquals('ERROR', $data['status']);
-
-        static::assertNotEmpty($action->getErrors());
+        static::assertInstanceOf(Action::class, $action);
     }
 
     public function testHttpMethodEnforce()
@@ -142,10 +68,12 @@ class FreshMailTest extends TestCase
 
         $fm = $this->getFreshMail($responses);
         $action = $fm->request('/ping', [], 'GET');
-        static::assertEquals('GET', $action->getRequest()->getMethod());
+
+        static::assertInstanceOf(Action::class, $action);
 
         $action = $fm->request('/ping', [], 'POST');
-        static::assertEquals('POST', $action->getRequest()->getMethod());
+
+        static::assertInstanceOf(Action::class, $action);
 
         $this->expectException(\InvalidArgumentException::class);
         $fm->request('/ping', [], 'BAD');
@@ -161,8 +89,6 @@ class FreshMailTest extends TestCase
         ];
         $fm = $this->getFreshMail($responses);
 
-        $expected = '/rest/ping';
-
         $endpoints = [
             'rest/ping',
             '/rest/ping',
@@ -172,7 +98,7 @@ class FreshMailTest extends TestCase
 
         foreach ($endpoints as $endpoint) {
             $action = $fm->request($endpoint);
-            static::assertEquals($expected, $action->getRequest()->getUri()->getPath());
+            static::assertInstanceOf(Action::class, $action);
         }
     }
 }
